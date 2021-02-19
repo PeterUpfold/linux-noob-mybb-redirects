@@ -1,4 +1,5 @@
 <IfModule mod_rewrite.c>
     RewriteEngine on
     RewriteRule ^topic/(.*)$ redirect.php?topic=$1 [L,QSA]
+    RewriteRule ^forum/(.*)$ redirect.php?forum=$1 [L,QSA]
 </IfModule>

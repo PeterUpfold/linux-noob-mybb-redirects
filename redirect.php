@@ -70,7 +70,7 @@ function sanitise_url($url) {
 function issue_301($destination) {
     header('HTTP/1.1 301 Moved Permanently');
     header('Location: ' . sanitise_url(MYBB_URI_BASE . $destination));
-    ?><h1>This topic is now found at <a href='<?php echo sanitise_url(MYBB_URI_BASE . $destination); ?>'><?php echo sanitise_url(MYBB_URI_BASE . $destination); ?></a>
+    ?><h1>This content is now found at <a href='<?php echo sanitise_url(MYBB_URI_BASE . $destination); ?>'><?php echo sanitise_url(MYBB_URI_BASE . $destination); ?></a></h1>
     <?php
     die();
 }
@@ -164,6 +164,90 @@ function lookup_legacy_thread() {
     issue_301('/thread-' . intval($new_tid) . '.html');
 }
 
+/**
+ * Issue a 301 redirect for a legacy forum link to its current link.
+ */
+function lookup_legacy_forum() {
+    //  look up IPS_PREFIX forums_forums -> id.
+    // get from core_sys_lang_words the forums_forum_[id] language string -> word_default field
+
+    $matches = [];
+    $matched = preg_match('/forum\/([0-9]+)([a-z\-]+)/', $_SERVER['REQUEST_URI'], $matches);
+
+    if (!$matched) {
+        return false;
+    }
+
+    if (count($matches) !== 3) {
+        return false;
+    }
+
+    $old_fid = intval($matches[1]);
+
+    // look up in legacy database 
+    $old_db_conn = new \mysqli('localhost', IPS_USERNAME, IPS_PASSWORD, IPS_DATABASE);
+    if ($old_db_conn->connect_errno) {
+        $old_db_conn->close();
+        fail_with_message('Unable to establish legacy database connection');
+    }
+
+    $word_key = 'forums_forum_' . $old_fid;
+
+    if (!($legacy_forum_stmt = $old_db_conn->prepare(
+        'SELECT word_default FROM ' . IPS_PREFIX . 'core_sys_lang_words WHERE word_key = ?'
+    ))) {
+        $old_db_conn->close();
+        fail_with_message('Unable to prepare legacy forum database query statement');
+    }
+
+    $legacy_forum_stmt->bind_param('s', $word_key);
+    $legacy_forum_stmt->execute();
+    $legacy_forum_stmt->bind_result($word_default);
+    $legacy_forum_stmt->store_result();
+    if ($legacy_forum_stmt->num_rows !== 1) {
+        $legacy_forum_stmt->close();
+        $old_db_conn->close();
+        issue_404('There were ' . intval($legacy_forum_stmt->num_rows) . ' rows found for the query for this legacy forum.');
+    }
+    $legacy_forum_stmt->fetch();
+    $legacy_forum_stmt->close();
+    $old_db_conn->close();
+
+     // armed with the start_date, let's find the new thread by the new 'dateline' item
+
+     $new_db_conn = new \mysqli('localhost', MYBB_USERNAME, MYBB_PASSWORD, MYBB_DATABASE);
+     if ($new_db_conn->connect_errno) {
+         $new_db_conn->close();
+         fail_with_message('Unable to establish new database connection');
+     }
+     
+     if (!($new_forum_stmt = $new_db_conn->prepare(
+         'SELECT fid FROM ' . MYBB_PREFIX . 'forums WHERE name = ?'
+     ))) {
+         $new_db_conn->close();
+         fail_with_message('Unable to prepare new forum database query statement');
+     }
+ 
+     $new_forum_stmt->bind_param('s', $word_default);
+     $new_forum_stmt->execute();
+     $new_forum_stmt->bind_result($new_fid);
+     $new_forum_stmt->store_result();
+ 
+     if ($new_forum_stmt->num_rows !== 1) {
+         $new_forum_stmt->close();
+         $new_db_conn->close();
+         issue_404('There were ' . intval($new_forum_stmt->num_rows) . ' rows found for the query for this new forum.');
+     }
+ 
+     $new_forum_stmt->fetch();
+     $new_forum_stmt->close();
+ 
+     $new_db_conn->close();
+ 
+     issue_301('/forum-' . intval($new_fid) . '.html');
+
+}
+
 
 /* Main Logic */
 if (!file_exists(__DIR__ . '/config.php')) {
@@ -176,5 +260,10 @@ if (!defined('MYBB_URI_BASE')) {
     fail_with_message('Config missing MYBB_URI_BASE');
 }
 
-lookup_legacy_thread();
+if (array_key_exists('thread', $_GET)) {
+    lookup_legacy_thread();
+}
+else if (array_key_exists('forum', $_GET)) {
+    lookup_legacy_forum();
+}
 
