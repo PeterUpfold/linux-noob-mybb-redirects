@@ -22,4 +22,4 @@ define('MYBB_USERNAME', 'database_username');
 define('MYBB_PASSWORD', 'database_password');
 define('MYBB_PREFIX', 'mybb_');
 
-define('MYBB_URI_BASE', 'https://www.linux-noob.com/forums/');
+define('MYBB_URI_BASE', 'https://www.linux-noob.com/forums');

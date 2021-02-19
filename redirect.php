@@ -8,6 +8,14 @@
     Copyright (C) 2021 Peter Upfold. See LICENSE file for details.
 */
 
+/**
+ * Risks and Caveats
+ * 
+ * Note that this **does** allow unauthenticated users to enumerate which thread IDs exist
+ * and which do not -- although they will be redirected to a page that requires login,
+ * so they are not able to determine the contents/title of those threads.
+ */
+
 /* Functions */
 
 /**
@@ -61,7 +69,7 @@ function sanitise_url($url) {
  */
 function issue_301($destination) {
     header('HTTP/1.1 301 Moved Permanently');
-    header('Location: ' . MYBB_URI_BASE . $destination);
+    header('Location: ' . sanitise_url(MYBB_URI_BASE . $destination));
     ?><h1>This topic is now found at <a href='<?php echo sanitise_url(MYBB_URI_BASE . $destination); ?>'><?php echo sanitise_url(MYBB_URI_BASE . $destination); ?></a>
     <?php
     die();
@@ -114,7 +122,7 @@ function lookup_legacy_thread() {
     if ($legacy_thread_stmt->num_rows !== 1) {
         $legacy_thread_stmt->close();
         $old_db_conn->close();
-        issue_404('There were ' . $legacy_thread_stmt->num_rows . ' found for the query for this legacy thread.');
+        issue_404('There were ' . intval($legacy_thread_stmt->num_rows) . ' rows found for the query for this legacy thread.');
     }
     
     $legacy_thread_stmt->fetch();
@@ -145,7 +153,7 @@ function lookup_legacy_thread() {
     if ($new_thread_stmt->num_rows !== 1) {
         $new_thread_stmt->close();
         $new_db_conn->close();
-        issue_404('There were ' . $new_thread_stmt->num_rows . ' found for the query for this new thread.');
+        issue_404('There were ' . intval($new_thread_stmt->num_rows) . ' rows found for the query for this new thread.');
     }
 
     $new_thread_stmt->fetch();
@@ -153,8 +161,7 @@ function lookup_legacy_thread() {
 
     $new_db_conn->close();
 
-    echo $new_tid;
-
+    issue_301('/thread-' . intval($new_tid) . '.html');
 }
 
 
@@ -169,5 +176,5 @@ if (!defined('MYBB_URI_BASE')) {
     fail_with_message('Config missing MYBB_URI_BASE');
 }
 
-var_dump($_SERVER['REQUEST_URI']);
+lookup_legacy_thread();
 
