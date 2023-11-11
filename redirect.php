@@ -28,7 +28,7 @@ function fail_with_message($message) {
     <img src='/linuxnoob_hatch_64.png' alt='Linux-Noob logo'>
     <h1>There is a problem</h1>
     <p>Apologies, but it was not possible to redirect you to where this topic is now located.</p>
-    <p>Please notify peter@linux-noob.com that you saw this error.</p>
+    <p>Please notify the site administrators that you saw this error.</p>
     <p><strong><?php echo $message; ?></strong></p>
     </body>
     </html><?php
@@ -45,7 +45,7 @@ function issue_404($reason) {
     <img src='/linuxnoob_hatch_64.png' alt='Linux-Noob logo'>
     <h1>We weren't able to find that</h1>
     <p>Apologies, but it was not possible to redirect you to where this topic is now located.</p>
-    <p>Please notify peter@linux-noob.com that you saw this error.</p>
+    <p>Please notify the site administrators that you saw this error.</p>
     <p><strong><?php echo $reason; ?></strong></p>
     </body>
     </html><?php
@@ -120,9 +120,10 @@ function lookup_legacy_thread() {
     $legacy_thread_stmt->store_result();
 
     if ($legacy_thread_stmt->num_rows !== 1) {
+	$num_rows = $legacy_thread_stmt->num_rows;
         $legacy_thread_stmt->close();
         $old_db_conn->close();
-        issue_404('There were ' . intval($legacy_thread_stmt->num_rows) . ' rows found for the query for this legacy thread.');
+        issue_404('There were ' . intval($num_rows) . ' rows found for the query for this legacy thread.');
     }
     
     $legacy_thread_stmt->fetch();
@@ -151,9 +152,10 @@ function lookup_legacy_thread() {
     $new_thread_stmt->store_result();
 
     if ($new_thread_stmt->num_rows !== 1) {
+	$num_rows = $new_thread_stmt->num_rows;
         $new_thread_stmt->close();
         $new_db_conn->close();
-        issue_404('There were ' . intval($new_thread_stmt->num_rows) . ' rows found for the query for this new thread.');
+        issue_404('There were ' . intval($num_rows) . ' rows found for the query for this new thread.');
     }
 
     $new_thread_stmt->fetch();
@@ -205,9 +207,10 @@ function lookup_legacy_forum() {
     $legacy_forum_stmt->bind_result($word_default);
     $legacy_forum_stmt->store_result();
     if ($legacy_forum_stmt->num_rows !== 1) {
+	$num_rows = $legacy_forum_stmt->num_rows;
         $legacy_forum_stmt->close();
         $old_db_conn->close();
-        issue_404('There were ' . intval($legacy_forum_stmt->num_rows) . ' rows found for the query for this legacy forum.');
+        issue_404('There were ' . intval($num_rows) . ' rows found for the query for this legacy forum.');
     }
     $legacy_forum_stmt->fetch();
     $legacy_forum_stmt->close();
@@ -234,9 +237,10 @@ function lookup_legacy_forum() {
      $new_forum_stmt->store_result();
  
      if ($new_forum_stmt->num_rows !== 1) {
+	 $num_rows = $new_forum_stmt->num_rows;
          $new_forum_stmt->close();
          $new_db_conn->close();
-         issue_404('There were ' . intval($new_forum_stmt->num_rows) . ' rows found for the query for this new forum.');
+         issue_404('There were ' . intval($num_rows) . ' rows found for the query for this new forum.');
      }
  
      $new_forum_stmt->fetch();
@@ -260,10 +264,14 @@ if (!defined('MYBB_URI_BASE')) {
     fail_with_message('Config missing MYBB_URI_BASE');
 }
 
-if (array_key_exists('thread', $_GET)) {
-    lookup_legacy_thread();
+if (array_key_exists('topic', $_GET)) {
+    if (!lookup_legacy_thread()) {
+	issue_404('No matches');
+    }
 }
 else if (array_key_exists('forum', $_GET)) {
-    lookup_legacy_forum();
+    if (!lookup_legacy_forum()) {
+	issue_404('No matches');
+    }
 }
 
